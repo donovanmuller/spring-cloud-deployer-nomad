@@ -98,7 +98,7 @@ public class NomadDeployerProperties {
 	 * See https://github.com/spring-cloud/spring-cloud-stream-app-maven-plugin/issues/10 for
 	 * support for JAVA_OPTS on the starter apps.
 	 */
-	private String resourcesMemory = "768";
+	private String resourcesMemory = "512";
 
 	/**
 	 * The <a href="https://www.nomadproject.io/docs/jobspec/json.html#DiskMB">disk</a> required in

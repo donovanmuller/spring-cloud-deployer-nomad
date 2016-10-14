@@ -3,6 +3,9 @@
 An implementation of the [spring-cloud-deployer](https://github.com/spring-cloud/spring-cloud-deployer) 
 SPI for scheduling applications with [Hashicorp Nomad](https://www.nomadproject.io/).
 
+Please see the [Spring Cloud Data Flow Server Nomad](https://github.com/donovanmuller/spring-cloud-dataflow-server-nomad)
+for a runtime implementation of this deployer SPI implementation.
+
 This implementation borrows heavily from the [spring-cloud-deployer-kubernetes](https://github.com/spring-cloud/spring-cloud-deployer-kubernetes)
 project.
 
@@ -10,25 +13,10 @@ project.
 
 The Nomad [HTTP API](https://www.nomadproject.io/docs/http/index.html)
 is consumed using the [nomad-api](https://github.com/zanella/nomad-api)
-project by [Rafael Zanella](https://github.com/zanella). Huge thanks for the initial implementation.
-
-Some missing API models have been added and others altered for use with the latest
-Nomad HTTP API. The changes have been committed on [this fork](https://github.com/donovanmuller/nomad-api). 
-A pull request ([#1](https://github.com/zanella/nomad-api/pull/1)) has been opened with these changes.
+project by [Rafael Zanella](https://github.com/zanella). 
+Huge thanks for the already having done all the hard work.
 
 ## Building
-
-### nomad-api fork
- 
-Due to the modifications needed on the `nomad-api` project and in lieu of the open pull request being merged
-in the upstream project, the fork for `nomad-api` must be built and installed before building the Nomad deployer:
-
-```bash
-$ git clone https://github.com/donovanmuller/nomad-api.git
-$ ./mvnw install
-```
-
-### Nomad deployer
 
 If you don't have a Nomad instance available to run the integration tests as part of the build, 
 you can skip the tests and build the Nomad deployer with:
