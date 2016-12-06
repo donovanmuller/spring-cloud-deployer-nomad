@@ -7,9 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
-import org.springframework.cloud.deployer.spi.nomad.AbstractNomadDeployer;
 import org.springframework.cloud.deployer.spi.nomad.NomadDeployerProperties;
-import org.springframework.cloud.deployer.spi.nomad.NomadDeploymentPropertyKeys;
 import org.springframework.cloud.deployer.spi.task.LaunchState;
 import org.springframework.cloud.deployer.spi.task.TaskLauncher;
 import org.springframework.cloud.deployer.spi.task.TaskStatus;
@@ -25,12 +23,12 @@ import io.github.zanella.nomad.v1.nodes.models.TaskGroup;
 
 /**
  * Deployer responsible for deploying
- * {@link org.springframework.cloud.deployer.resource.docker.DockerResource} based tasks using the
+ * {@link org.springframework.cloud.deployer.resource.docker.DockerResource} based Task using the
  * Nomad <a href="https://www.nomadproject.io/docs/drivers/docker.html">Docker</a> driver.
  *
  * @author Donovan Muller
  */
-public class DockerNomadTaskLauncher extends AbstractNomadDeployer implements TaskLauncher {
+public class DockerNomadTaskLauncher extends AbstractDockerNomadDeployer implements TaskLauncher {
 
 	private static final Logger log = LoggerFactory.getLogger(DockerNomadTaskLauncher.class);
 
@@ -66,6 +64,16 @@ public class DockerNomadTaskLauncher extends AbstractNomadDeployer implements Ta
 		JobSummary job = getJobByName(taskId);
 		JobAllocation allocation = getAllocationEvaluation(client, job);
 		return buildTaskStatus(taskId, allocation);
+	}
+
+	@Override
+	public void cleanup(final String s) {
+		// TODO
+	}
+
+	@Override
+	public void destroy(final String s) {
+		// TODO
 	}
 
 	/**
@@ -119,14 +127,11 @@ public class DockerNomadTaskLauncher extends AbstractNomadDeployer implements Ta
 		env.putAll(createEnvironmentVariables(deployerProperties, request));
 		task.setEnv(env);
 
-		task.setResources(new Resources(
-				Integer.valueOf(request.getDeploymentProperties().getOrDefault(
-						NomadDeploymentPropertyKeys.NOMAD_RESOURCES_CPU, deployerProperties.getResourcesCpu())),
-				Integer.valueOf(request.getDeploymentProperties().getOrDefault(
-						NomadDeploymentPropertyKeys.NOMAD_RESOURCES_MEMORY, deployerProperties.getResourcesMemory())),
-				Integer.valueOf(request.getDeploymentProperties().getOrDefault(
-						NomadDeploymentPropertyKeys.NOMAD_RESOURCES_DISK, deployerProperties.getResourcesDisk())),
-				0, null));
+		task.setResources(new Resources(getCpuResource(deployerProperties, request),
+				getMemoryResource(deployerProperties, request),
+				// deprecated, use
+				// org.springframework.cloud.deployer.spi.nomad.NomadDeployerProperties.EphemeralDisk
+				null, 0, null));
 
 		task.setLogConfig(new Task.LogConfig(deployerProperties.getLoggingMaxFiles(),
 				deployerProperties.getLoggingMaxFileSize()));

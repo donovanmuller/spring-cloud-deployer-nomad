@@ -15,12 +15,14 @@ import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.app.DeploymentState;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
-import org.springframework.cloud.deployer.spi.nomad.AbstractNomadDeployer;
 import org.springframework.cloud.deployer.spi.nomad.NomadAppInstanceStatus;
 import org.springframework.cloud.deployer.spi.nomad.NomadDeployerProperties;
 import org.springframework.cloud.deployer.spi.nomad.NomadDeploymentPropertyKeys;
 import org.springframework.cloud.deployer.spi.nomad.NomadSupport;
 import org.springframework.util.StringUtils;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.github.zanella.nomad.NomadClient;
 import io.github.zanella.nomad.v1.jobs.models.JobAllocation;
@@ -38,7 +40,7 @@ import io.github.zanella.nomad.v1.nodes.models.Task;
  *
  * @author Donovan Muller
  */
-public class DockerNomadAppDeployer extends AbstractNomadDeployer implements AppDeployer, NomadSupport {
+public class DockerNomadAppDeployer extends AbstractDockerNomadDeployer implements AppDeployer, NomadSupport {
 
 	private static final Logger log = LoggerFactory.getLogger(DockerNomadAppDeployer.class);
 
@@ -154,32 +156,55 @@ public class DockerNomadAppDeployer extends AbstractNomadDeployer implements App
 			throw new IllegalArgumentException("Unable to get URI for " + request.getResource(), e);
 		}
 
-		Map<String, Integer> portMap = new HashMap<>();
-		portMap.put("http", configureExternalPort(request));
-		config.setPortMap(Stream.of(portMap).collect(toList()));
-		// according to the Nomad documentation, you cannot pass command like arguments to a Docker
-		// container without also specifying a command, however, it is possible. See
-		// https://www.nomadproject.io/docs/drivers/docker.html#args
-		config.setArgs(request.getCommandlineArguments());
-		task.setConfig(config);
-
 		Resources.Network network = new Resources.Network();
-		network.setMBits(deployerProperties.getNetworkMBits());
+		network.setMBits(deployerProperties.getResources().getNetworkMBits());
 		List<Resources.Network.DynamicPort> dynamicPorts = new ArrayList<>();
 		dynamicPorts.add(new Resources.Network.DynamicPort(configureExternalPort(request), "http"));
 		network.setDynamicPorts(dynamicPorts);
 
-		task.setResources(new Resources(
-				Integer.valueOf(request.getDeploymentProperties().getOrDefault(
-						NomadDeploymentPropertyKeys.NOMAD_RESOURCES_CPU, deployerProperties.getResourcesCpu())),
-				Integer.valueOf(request.getDeploymentProperties().getOrDefault(
-						NomadDeploymentPropertyKeys.NOMAD_RESOURCES_MEMORY, deployerProperties.getResourcesMemory())),
-				Integer.valueOf(request.getDeploymentProperties().getOrDefault(
-						NomadDeploymentPropertyKeys.NOMAD_RESOURCES_DISK, deployerProperties.getResourcesDisk())),
-				0, Stream.of(network).collect(toList())));
+		task.setResources(new Resources(getCpuResource(deployerProperties, request),
+				getMemoryResource(deployerProperties, request),
+				// deprecated, use
+				// org.springframework.cloud.deployer.spi.nomad.NomadDeployerProperties.EphemeralDisk
+				null, 0, Stream.of(network).collect(toList())));
 
 		HashMap<String, String> env = new HashMap<>();
 		env.putAll(createEnvironmentVariables(deployerProperties, request));
+
+		Map<String, Integer> portMap = new HashMap<>();
+		portMap.put("http", configureExternalPort(request));
+		config.setPortMap(Stream.of(portMap).collect(toList()));
+		config.setVolumes(createVolumes(deployerProperties, request));
+
+		// See
+		// https://github.com/spring-cloud/spring-cloud-deployer-kubernetes/blob/master/src/main/java/org/springframework/cloud/deployer/spi/kubernetes/DefaultContainerFactory.java#L91
+		EntryPointStyle entryPointStyle = determineEntryPointStyle(deployerProperties, request);
+		switch (entryPointStyle) {
+		case exec:
+			config.setArgs(request.getCommandlineArguments());
+			break;
+		case boot:
+			if (env.containsKey("SPRING_APPLICATION_JSON")) {
+				throw new IllegalStateException(
+						"You can't use boot entry point style and also set SPRING_APPLICATION_JSON for the app");
+			}
+			try {
+				env.put("SPRING_APPLICATION_JSON",
+						new ObjectMapper().writeValueAsString(request.getDefinition().getProperties()));
+			}
+			catch (JsonProcessingException e) {
+				throw new IllegalStateException("Unable to create SPRING_APPLICATION_JSON", e);
+			}
+			break;
+		case shell:
+			for (String key : request.getDefinition().getProperties().keySet()) {
+				String envVar = key.replace('.', '_').toUpperCase();
+				env.put(envVar, request.getDefinition().getProperties().get(key));
+			}
+			break;
+		}
+
+		task.setConfig(config);
 		task.setEnv(env);
 
 		Service service = new Service();
@@ -244,7 +269,6 @@ public class DockerNomadAppDeployer extends AbstractNomadDeployer implements App
 	 *
 	 * <ul>
 	 * <li>spring.cloud.deployer.nomad.fabio.expose</li>
-	 * <li>spring.cloud.deployer.nomad.exposeViaFabio</li>
 	 * </ul>
 	 */
 	protected boolean exposeFabioRoute(AppDeploymentRequest request) {

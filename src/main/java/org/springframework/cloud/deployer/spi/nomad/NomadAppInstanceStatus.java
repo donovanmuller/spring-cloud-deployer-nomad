@@ -1,5 +1,6 @@
 package org.springframework.cloud.deployer.spi.nomad;
 
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -64,6 +65,19 @@ public class NomadAppInstanceStatus implements AppInstanceStatus {
 		result.put("job_id", allocation.getJobId());
 		result.put("evaluation_id", allocation.getEvalId());
 		result.put("node_id", allocation.getNodeId());
+		if (allocation.getJob() != null) {
+			Map<String, String> meta = allocation.getJob().getMeta();
+			if (meta != null && !meta.isEmpty()) {
+				StringBuilder metaAttribute = new StringBuilder();
+				for (Iterator<Map.Entry<String, String>> metaIterator = meta.entrySet().iterator(); metaIterator
+						.hasNext();) {
+					final Map.Entry<String, String> entry = metaIterator.next();
+					metaAttribute.append(String.format("%s=%s%s", entry.getKey(), entry.getValue(),
+							metaIterator.hasNext() ? ", " : ""));
+				}
+				result.put("meta", metaAttribute.toString());
+			}
+		}
 		if (allocation.getResources() != null) {
 			Resources resources = allocation.getResources();
 			result.put("cpu", resources.getCpu().toString());

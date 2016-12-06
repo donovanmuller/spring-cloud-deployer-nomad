@@ -29,9 +29,6 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.hamcrest.core.Is;
@@ -41,12 +38,13 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.SpringApplicationConfiguration;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
 import org.springframework.cloud.deployer.spi.core.AppDefinition;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.task.TaskLauncher;
-import org.springframework.cloud.deployer.spi.task.TaskStatus;
+import org.springframework.cloud.deployer.spi.test.AbstractTaskLauncherIntegrationTests;
+import org.springframework.cloud.deployer.spi.test.Timeout;
 import org.springframework.core.io.Resource;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
@@ -55,18 +53,22 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
  *
  * @author Donovan Muller
  */
-@SpringApplicationConfiguration(classes = { NomadAutoConfiguration.class })
+@SpringBootTest(classes = { NomadAutoConfiguration.class })
 @RunWith(SpringJUnit4ClassRunner.class)
-public class DockerNomadTaskLauncherIntegrationTests {
+public class DockerNomadTaskLauncherIntegrationTests extends AbstractTaskLauncherIntegrationTests {
 
-	private static final Log logger = LogFactory
-			.getLog(DockerNomadTaskLauncherIntegrationTests.class);
+	private static final Log logger = LogFactory.getLog(DockerNomadTaskLauncherIntegrationTests.class);
 
 	@ClassRule
 	public static NomadTestSupport NomadAvailable = new NomadTestSupport();
 
 	@Autowired
-	TaskLauncher taskLauncher;
+	private TaskLauncher taskLauncher;
+
+	@Override
+	protected TaskLauncher taskLauncher() {
+		return taskLauncher;
+	}
 
 	@Test
 	public void testSimpleLaunch() {
@@ -75,16 +77,15 @@ public class DockerNomadTaskLauncherIntegrationTests {
 		properties.put("killDelay", "1000");
 		properties.put("exitCode", "0");
 		AppDefinition definition = new AppDefinition(this.randomName(), properties);
-		Resource resource = integrationTestTask();
+		Resource resource = testApplication();
 		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource);
 		logger.info(String.format("Launching %s...", request.getDefinition().getName()));
 		String deploymentId = taskLauncher.launch(request);
 		logger.info(String.format("Launched %s ", deploymentId));
 
 		Timeout timeout = launchTimeout();
-		assertThat(deploymentId,
-				eventually(hasStatusThat(Matchers.hasProperty("state", is(complete))),
-						timeout.maxAttempts, timeout.pause));
+		assertThat(deploymentId, eventually(hasStatusThat(Matchers.hasProperty("state", is(complete))),
+				timeout.maxAttempts, timeout.pause));
 
 		taskLauncher.cancel(deploymentId);
 	}
@@ -97,7 +98,7 @@ public class DockerNomadTaskLauncherIntegrationTests {
 		properties.put("killDelay", "1000");
 		properties.put("exitCode", "0");
 		AppDefinition definition = new AppDefinition(this.randomName(), properties);
-		Resource resource = integrationTestTask();
+		Resource resource = testApplication();
 		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource);
 		logger.info(String.format("Launching %s...", request.getDefinition().getName()));
 		String deploymentId1 = taskLauncher.launch(request);
@@ -107,16 +108,10 @@ public class DockerNomadTaskLauncherIntegrationTests {
 		MatcherAssert.assertThat(deploymentId1, not(Is.is(deploymentId2)));
 
 		Timeout timeout = launchTimeout();
-		Assert.assertThat(deploymentId1,
-				eventually(
-						hasStatusThat(
-								Matchers.hasProperty("state", Matchers.is(complete))),
-						timeout.maxAttempts, timeout.pause));
-		Assert.assertThat(deploymentId2,
-				eventually(
-						hasStatusThat(
-								Matchers.hasProperty("state", Matchers.is(complete))),
-						timeout.maxAttempts, timeout.pause));
+		Assert.assertThat(deploymentId1, eventually(hasStatusThat(Matchers.hasProperty("state", Matchers.is(complete))),
+				timeout.maxAttempts, timeout.pause));
+		Assert.assertThat(deploymentId2, eventually(hasStatusThat(Matchers.hasProperty("state", Matchers.is(complete))),
+				timeout.maxAttempts, timeout.pause));
 
 		taskLauncher.cancel(deploymentId1);
 		taskLauncher.cancel(deploymentId2);
@@ -130,16 +125,15 @@ public class DockerNomadTaskLauncherIntegrationTests {
 		properties.put("killDelay", "1000");
 		properties.put("exitCode", "1");
 		AppDefinition definition = new AppDefinition(this.randomName(), properties);
-		Resource resource = integrationTestTask();
+		Resource resource = testApplication();
 		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource);
 		logger.info(String.format("Launching %s...", request.getDefinition().getName()));
 		String deploymentId = taskLauncher.launch(request);
 		logger.info(String.format("Launched %s", deploymentId));
 
 		Timeout timeout = launchTimeout();
-		assertThat(deploymentId,
-				eventually(hasStatusThat(Matchers.hasProperty("state", is(failed))),
-						timeout.maxAttempts, timeout.pause));
+		assertThat(deploymentId, eventually(hasStatusThat(Matchers.hasProperty("state", is(failed))),
+				timeout.maxAttempts, timeout.pause));
 
 		taskLauncher.cancel(deploymentId);
 	}
@@ -154,63 +148,32 @@ public class DockerNomadTaskLauncherIntegrationTests {
 		Map<String, String> properties = new HashMap<>();
 		properties.put("killDelay", "1000");
 		AppDefinition definition = new AppDefinition(this.randomName(), properties);
-		Resource resource = integrationTestTask();
-		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource,
-				Collections.emptyMap(), Collections.singletonList("--exitCode=0"));
+		Resource resource = testApplication();
+		AppDeploymentRequest request = new AppDeploymentRequest(definition, resource, Collections.emptyMap(),
+				Collections.singletonList("--exitCode=0"));
 		logger.info(String.format("Launching %s...", request.getDefinition().getName()));
 		String deploymentId = taskLauncher.launch(request);
 		logger.info(String.format("Launched %s ", deploymentId));
 
 		Timeout timeout = launchTimeout();
-		assertThat(deploymentId,
-				eventually(hasStatusThat(Matchers.hasProperty("state", is(complete))),
-						timeout.maxAttempts, timeout.pause));
+		assertThat(deploymentId, eventually(hasStatusThat(Matchers.hasProperty("state", is(complete))),
+				timeout.maxAttempts, timeout.pause));
 
 		taskLauncher.cancel(deploymentId);
 	}
 
+	@Override
 	protected String randomName() {
 		return "task";
 	}
 
-	protected Resource integrationTestTask() {
-		return new DockerResource(
-				"springcloud/spring-cloud-deployer-spi-test-app:1.0.3.RELEASE");
+	@Override
+	protected Resource testApplication() {
+		return new DockerResource("springcloud/spring-cloud-deployer-spi-test-app:1.0.3.RELEASE");
 	}
 
 	protected Timeout launchTimeout() {
 		return new Timeout(20, 5000);
 	}
 
-	protected Matcher<String> hasStatusThat(final Matcher<TaskStatus> statusMatcher) {
-		return new BaseMatcher() {
-			private TaskStatus status;
-
-			public boolean matches(Object item) {
-				this.status = DockerNomadTaskLauncherIntegrationTests.this.taskLauncher
-						.status((String) item);
-				return statusMatcher.matches(this.status);
-			}
-
-			public void describeMismatch(Object item, Description mismatchDescription) {
-				mismatchDescription.appendText("status of ").appendValue(item)
-						.appendText(" ");
-				statusMatcher.describeMismatch(this.status, mismatchDescription);
-			}
-
-			public void describeTo(Description description) {
-				statusMatcher.describeTo(description);
-			}
-		};
-	}
-
-	protected static class Timeout {
-		public final int maxAttempts;
-		public final int pause;
-
-		public Timeout(int maxAttempts, int pause) {
-			this.maxAttempts = maxAttempts;
-			this.pause = pause;
-		}
-	}
 }

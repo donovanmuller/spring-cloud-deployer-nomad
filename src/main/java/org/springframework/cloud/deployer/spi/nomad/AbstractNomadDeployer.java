@@ -10,6 +10,7 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.util.Assert;
 
 import io.github.zanella.nomad.v1.jobs.models.JobSpec;
 import io.github.zanella.nomad.v1.nodes.models.Task;
@@ -46,6 +47,7 @@ public abstract class AbstractNomadDeployer implements NomadSupport {
 		jobSpec.setDatacenters(deployerProperties.getDatacenters());
 		jobSpec.setPriority(Integer.valueOf(request.getDeploymentProperties()
 				.getOrDefault(NomadDeploymentPropertyKeys.JOB_PRIORITY, deployerProperties.getPriority().toString())));
+		jobSpec.setMeta(createMeta(request));
 
 		return jobSpec;
 	}
@@ -75,16 +77,58 @@ public abstract class AbstractNomadDeployer implements NomadSupport {
 						milliToNanoseconds(deployerProperties.getRestartPolicyInterval()),
 						deployerProperties.getRestartPolicyAttempts(), deployerProperties.getRestartPolicyMode()));
 
+		taskGroup.setEphemeralDisk(new TaskGroup.EphemeralDisk(
+				Boolean.parseBoolean(request.getDeploymentProperties().getOrDefault(
+						NomadDeploymentPropertyKeys.NOMAD_EPHEMERAL_DISK_STICKY,
+						deployerProperties.getEphemeralDisk().getSticky().toString())),
+				Boolean.parseBoolean(request.getDeploymentProperties().getOrDefault(
+						NomadDeploymentPropertyKeys.NOMAD_EPHEMERAL_DISK_MIGRATE,
+						deployerProperties.getEphemeralDisk().getMigrate().toString())),
+				Integer.valueOf(request.getDeploymentProperties().getOrDefault(
+						NomadDeploymentPropertyKeys.NOMAD_EPHEMERAL_DISK_SIZE,
+						deployerProperties.getEphemeralDisk().getSize().toString()))));
+
 		return taskGroup;
 	}
 
 	protected Map<String, String> createEnvironmentVariables(NomadDeployerProperties deployerProperties,
 			AppDeploymentRequest request) {
-		Map<String, String> commandLineArguments = new HashMap<>();
-		commandLineArguments.putAll(commandLineArgumentsToMap(deployerProperties.getEnvironmentVariables()));
-		commandLineArguments.putAll(request.getDefinition().getProperties());
+		Map<String, String> environmentVariables = new HashMap<>();
+		environmentVariables.putAll(commandLineArgumentsToMap(deployerProperties.getEnvironmentVariables()));
+		environmentVariables.putAll(request.getDefinition().getProperties());
+		environmentVariables.putAll(getAppEnvironmentVariables(request));
 
-		log.debug("Using environment variables: " + commandLineArguments);
-		return commandLineArguments;
+		log.debug("Using environment variables: " + environmentVariables);
+		return environmentVariables;
+	}
+
+	private Map<String, String> createMeta(AppDeploymentRequest request) {
+		Map<String, String> metaMap = new HashMap<>();
+		String metaValue = request.getDeploymentProperties().get(NomadDeploymentPropertyKeys.NOMAD_META);
+		if (metaValue != null) {
+			String[] metaKeyValue = metaValue.split(",");
+			for (String metaKeyValues : metaKeyValue) {
+				String[] strings = metaKeyValues.split("=", 2);
+				Assert.isTrue(strings.length == 2, "Invalid meta value declared: " + metaKeyValues);
+				metaMap.put(strings[0], strings[1]);
+			}
+		}
+		return metaMap;
+	}
+
+	private Map<String, String> getAppEnvironmentVariables(AppDeploymentRequest request) {
+		Map<String, String> appEnvVarMap = new HashMap<>();
+		String appEnvVar = request.getDeploymentProperties()
+				.get(NomadDeploymentPropertyKeys.NOMAD_ENVIRONMENT_VARIABLES);
+		if (appEnvVar != null) {
+			String[] appEnvVars = appEnvVar.split(",");
+			for (String envVar : appEnvVars) {
+				log.trace("Adding environment variable from AppDeploymentRequest: " + envVar);
+				String[] strings = envVar.split("=", 2);
+				Assert.isTrue(strings.length == 2, "Invalid environment variable declared: " + envVar);
+				appEnvVarMap.put(strings[0], strings[1]);
+			}
+		}
+		return appEnvVarMap;
 	}
 }

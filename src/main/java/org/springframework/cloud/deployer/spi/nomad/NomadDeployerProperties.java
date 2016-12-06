@@ -1,16 +1,127 @@
 package org.springframework.cloud.deployer.spi.nomad;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.cloud.deployer.spi.nomad.docker.EntryPointStyle;
 
 /**
  * @author Donovan Muller
  */
 @ConfigurationProperties(prefix = "spring.cloud.deployer.nomad")
 public class NomadDeployerProperties {
+
+	/**
+	 * Configuration properties for {@link io.github.zanella.nomad.v1.nodes.models.Resources}. See
+	 * https://www.nomadproject.io/docs/job-specification/resources.html
+	 */
+	public static class Resources {
+
+		/**
+		 * The <a href="https://www.nomadproject.io/docs/jobspec/json.html#CPU">CPU</a> required in
+		 * MHz. Default is 1000MHz;
+		 */
+		private String cpu = "1000";
+
+		/**
+		 * The <a href="https://www.nomadproject.io/docs/jobspec/json.html#MemoryMB">memory</a>
+		 * required in MB. Default is 512MB.
+		 *
+		 * N.B: This should change to a much lower value once we can set -Xmx via JAVA_OPTS.
+		 *
+		 * See https://github.com/spring-cloud/spring-cloud-stream-app-maven-plugin/issues/10 for
+		 * support for JAVA_OPTS on the starter apps.
+		 */
+		private String memory = "512";
+
+		/**
+		 * The number of <a href="https://www.nomadproject.io/docs/jobspec/json.html#MBits">MBits</a> in
+		 * bandwidth required.
+		 */
+		private Integer networkMBits = 10;
+
+		public Resources() {
+		}
+
+		public Resources(String cpu, String memory, Integer networkMBits) {
+			this.cpu = cpu;
+			this.memory = memory;
+			this.networkMBits = networkMBits;
+		}
+
+		public String getCpu() {
+			return cpu;
+		}
+
+		public void setCpu(String cpu) {
+			this.cpu = cpu;
+		}
+
+		public String getMemory() {
+			return memory;
+		}
+
+		public void setMemory(String memory) {
+			this.memory = memory;
+		}
+
+		public Integer getNetworkMBits() {
+			return networkMBits;
+		}
+
+		public void setNetworkMBits(final Integer networkMBits) {
+			this.networkMBits = networkMBits;
+		}
+	}
+
+	/**
+	 * Configuration property for {@link EphemeralDisk}. See
+	 * https://www.nomadproject.io/docs/job-specification/ephemeral_disk.html
+	 */
+	public static class EphemeralDisk {
+
+		private Boolean sticky = true;
+
+		private Boolean migrate = true;
+
+		private Integer size = 300;
+
+		public EphemeralDisk() {
+		}
+
+		public EphemeralDisk(Boolean sticky, Boolean migrate, Integer size) {
+			this.sticky = sticky;
+			this.migrate = migrate;
+			this.size = size;
+		}
+
+		public Boolean getSticky() {
+			return sticky;
+		}
+
+		public void setSticky(Boolean sticky) {
+			this.sticky = sticky;
+		}
+
+		public Boolean getMigrate() {
+			return migrate;
+		}
+
+		public void setMigrate(Boolean migrate) {
+			this.migrate = migrate;
+		}
+
+		public Integer getSize() {
+			return size;
+		}
+
+		public void setSize(Integer size) {
+			this.size = size;
+		}
+	}
 
 	/**
 	 * The hostname/IP address where a Nomad client is listening. Default is localhost.
@@ -75,36 +186,13 @@ public class NomadDeployerProperties {
 	 */
 	private Long checkTimeout = 120000L;
 
-	/**
-	 * The number of <a href="https://www.nomadproject.io/docs/jobspec/json.html#MBits">MBits</a> in
-	 * bandwidth required.
-	 */
-	private Integer networkMBits = 10;
-
-	/**
-	 * The <a href="https://www.nomadproject.io/docs/jobspec/json.html#CPU">CPU</a> required in MHz.
-	 * Default is 1000MHz;
-	 */
-	private String resourcesCpu = "1000";
-
-	/**
-	 * The <a href="https://www.nomadproject.io/docs/jobspec/json.html#MemoryMB">memory</a> required
-	 * in MB. Default is 512MB.
-	 *
-	 * N.B: This should change to a much lower value once we can set -Xmx via JAVA_OPTS similar to
-	 * https://github.com/spring-cloud/spring-cloud-deployer-kubernetes/pull/63. However, images
-	 * need to support passing JAVA_OPTS. See here: http://bit.ly/2dPgDvF (GitHub comment).
-	 *
-	 * See https://github.com/spring-cloud/spring-cloud-stream-app-maven-plugin/issues/10 for
-	 * support for JAVA_OPTS on the starter apps.
-	 */
-	private String resourcesMemory = "512";
+	private Resources resources = new Resources();
 
 	/**
 	 * The <a href="https://www.nomadproject.io/docs/jobspec/json.html#DiskMB">disk</a> required in
 	 * MB. Default is 200MB.
 	 */
-	private String resourcesDisk = "200";
+	private EphemeralDisk ephemeralDisk = new EphemeralDisk();
 
 	/**
 	 * The <a href="https://www.nomadproject.io/docs/jobspec/json.html#MaxFiles">maximum number of
@@ -152,6 +240,22 @@ public class NomadDeployerProperties {
 	 * </ul>
 	 */
 	private String restartPolicyMode = "delay";
+
+	/**
+	 * Entry point style used for the Docker image. To be used to determine how to pass in
+	 * properties.
+	 */
+	private EntryPointStyle entryPointStyle = EntryPointStyle.exec;
+
+	/**
+	 * A comma separated list of host_path:container_path values. See
+	 * https://www.nomadproject.io/docs/drivers/docker.html#volumes.
+	 *
+	 * E.g.
+	 *
+	 * <code>spring.cloud.deployer.nomad=/opt/data:/data,/opt/config:/config</code>
+	 */
+	private List<String> volumes = new ArrayList<>();
 
 	public String getNomadHost() {
 		return nomadHost;
@@ -225,36 +329,20 @@ public class NomadDeployerProperties {
 		this.checkHttpPath = checkHttpPath;
 	}
 
-	public Integer getNetworkMBits() {
-		return networkMBits;
+	public Resources getResources() {
+		return resources;
 	}
 
-	public void setNetworkMBits(Integer networkMBits) {
-		this.networkMBits = networkMBits;
+	public void setResources(final Resources resources) {
+		this.resources = resources;
 	}
 
-	public String getResourcesCpu() {
-		return resourcesCpu;
+	public EphemeralDisk getEphemeralDisk() {
+		return ephemeralDisk;
 	}
 
-	public void setResourcesCpu(String resourcesCpu) {
-		this.resourcesCpu = resourcesCpu;
-	}
-
-	public String getResourcesMemory() {
-		return resourcesMemory;
-	}
-
-	public void setResourcesMemory(String resourcesMemory) {
-		this.resourcesMemory = resourcesMemory;
-	}
-
-	public String getResourcesDisk() {
-		return resourcesDisk;
-	}
-
-	public void setResourcesDisk(String resourcesDisk) {
-		this.resourcesDisk = resourcesDisk;
+	public void setEphemeralDisk(final EphemeralDisk ephemeralDisk) {
+		this.ephemeralDisk = ephemeralDisk;
 	}
 
 	public Integer getLoggingMaxFiles() {
@@ -320,4 +408,21 @@ public class NomadDeployerProperties {
 	public void setRestartPolicyMode(String restartPolicyMode) {
 		this.restartPolicyMode = restartPolicyMode;
 	}
+
+	public EntryPointStyle getEntryPointStyle() {
+		return entryPointStyle;
+	}
+
+	public void setEntryPointStyle(EntryPointStyle entryPointStyle) {
+		this.entryPointStyle = entryPointStyle;
+	}
+
+	public List<String> getVolumes() {
+		return volumes;
+	}
+
+	public void setVolumes(List<String> volumes) {
+		this.volumes = volumes;
+	}
+
 }

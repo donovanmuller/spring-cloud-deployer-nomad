@@ -4,10 +4,11 @@ import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.SpringApplicationConfiguration;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.test.AbstractAppDeployerIntegrationTests;
+import org.springframework.cloud.deployer.spi.test.Timeout;
 import org.springframework.core.io.Resource;
 
 /**
@@ -15,9 +16,8 @@ import org.springframework.core.io.Resource;
  *
  * @author Donovan Muller
  */
-@SpringApplicationConfiguration(classes = { NomadAutoConfiguration.class })
-public class DockerNomadAppDeployerIntegrationTests
-		extends AbstractAppDeployerIntegrationTests {
+@SpringBootTest(classes = { NomadAutoConfiguration.class })
+public class DockerNomadAppDeployerIntegrationTests extends AbstractAppDeployerIntegrationTests {
 
 	@ClassRule
 	public static NomadTestSupport nomadAvailable = new NomadTestSupport();
@@ -70,12 +70,6 @@ public class DockerNomadAppDeployerIntegrationTests
 	}
 
 	@Override
-	public void testParameterPassing() {
-		log.info("Testing {}...", "ApplicationPropertiesPassing");
-		super.testParameterPassing();
-	}
-
-	@Override
 	protected String randomName() {
 		return "app-" + System.currentTimeMillis();
 	}
@@ -86,8 +80,7 @@ public class DockerNomadAppDeployerIntegrationTests
 	}
 
 	@Override
-	protected Resource integrationTestProcessor() {
-		return new DockerResource(
-				"springcloud/spring-cloud-deployer-spi-test-app:1.0.3.RELEASE");
+	protected Resource testApplication() {
+		return new DockerResource("springcloud/spring-cloud-deployer-spi-test-app:1.0.3.RELEASE");
 	}
 }
