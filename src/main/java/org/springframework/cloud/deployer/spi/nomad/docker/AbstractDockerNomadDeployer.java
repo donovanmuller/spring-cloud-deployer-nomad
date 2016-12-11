@@ -5,15 +5,19 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.nomad.AbstractNomadDeployer;
 import org.springframework.cloud.deployer.spi.nomad.NomadDeployerProperties;
 import org.springframework.cloud.deployer.spi.nomad.NomadDeploymentPropertyKeys;
-import org.springframework.cloud.deployer.spi.util.ByteSizeUtils;
 import org.springframework.util.StringUtils;
 
+import io.github.zanella.nomad.NomadClient;
+
 public abstract class AbstractDockerNomadDeployer extends AbstractNomadDeployer {
+
+	public AbstractDockerNomadDeployer(NomadClient client, NomadDeployerProperties deployerProperties) {
+		super(client, deployerProperties);
+	}
 
 	protected EntryPointStyle determineEntryPointStyle(NomadDeployerProperties properties,
 			AppDeploymentRequest request) {
@@ -57,48 +61,5 @@ public abstract class AbstractDockerNomadDeployer extends AbstractNomadDeployer 
 				.collect(Collectors.toList()));
 
 		return volumes;
-	}
-
-	/**
-	 * Get the CPU resource value from the following sources (in order of precedence):
-	 *
-	 * <ol>
-	 * <li>{@link AppDeployer#CPU_PROPERTY_KEY} deployment property</li>
-	 * <li>{@link NomadDeploymentPropertyKeys#NOMAD_RESOURCES_CPU} deployment property</li>
-	 * <li>{@link NomadDeployerProperties.Resources#cpu} deployer property</li>
-	 * </ol>
-	 */
-	protected Integer getCpuResource(NomadDeployerProperties properties, AppDeploymentRequest request) {
-		return Integer.valueOf(request.getDeploymentProperties().getOrDefault(AppDeployer.CPU_PROPERTY_KEY,
-				request.getDeploymentProperties().getOrDefault(NomadDeploymentPropertyKeys.NOMAD_RESOURCES_CPU,
-						properties.getResources().getCpu())));
-	}
-
-	/**
-	 * Get the memory resource value from the following sources (in order of precedence):
-	 *
-	 * <ol>
-	 * <li>{@link AppDeployer#MEMORY_PROPERTY_KEY} deployment property</li>
-	 * <li>{@link NomadDeploymentPropertyKeys#NOMAD_RESOURCES_MEMORY} deployment property</li>
-	 * <li>{@link NomadDeployerProperties.Resources#memory} deployer property</li>
-	 * </ol>
-	 */
-	protected Integer getMemoryResource(NomadDeployerProperties properties, AppDeploymentRequest request) {
-		Integer memory = getCommonDeployerMemory(request);
-		return memory != null ? memory
-				: Integer.valueOf(request.getDeploymentProperties().getOrDefault(
-						NomadDeploymentPropertyKeys.NOMAD_RESOURCES_MEMORY, properties.getResources().getMemory()));
-	}
-
-	/**
-	 * See
-	 * org.springframework.cloud.deployer.spi.kubernetes.AbstractKubernetesDeployer#getCommonDeployerMemory
-	 */
-	private Integer getCommonDeployerMemory(AppDeploymentRequest request) {
-		String mem = request.getDeploymentProperties().get(AppDeployer.MEMORY_PROPERTY_KEY);
-		if (mem == null) {
-			return null;
-		}
-		return Math.toIntExact(ByteSizeUtils.parseToMebibytes(mem));
 	}
 }

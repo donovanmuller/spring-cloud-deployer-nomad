@@ -21,7 +21,7 @@ public class AbstractNomadDeployerTest {
 
 	@Before
 	public void setup() {
-		deployer = new AbstractNomadDeployer() {
+		deployer = new AbstractNomadDeployer(null, new NomadDeployerProperties()) {
 
 			@Override
 			protected Integer getAppCount(final AppDeploymentRequest request) {

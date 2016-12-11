@@ -36,7 +36,7 @@ public class NomadAppInstanceStatus implements AppInstanceStatus {
 	 * https://github.com/hashicorp/nomad/blob/master/nomad/structs/structs.go#L2805
 	 * @return the {@link DeploymentState} of deployment
 	 */
-	private DeploymentState mapState() {
+	protected DeploymentState mapState() {
 		switch (allocation.getClientStatus()) {
 
 		case "pending":
@@ -49,6 +49,9 @@ public class NomadAppInstanceStatus implements AppInstanceStatus {
 			return DeploymentState.failed;
 
 		case "lost":
+			return DeploymentState.failed;
+
+		case "dead":
 			return DeploymentState.failed;
 
 		case "complete":

@@ -17,12 +17,19 @@
 	<name>spring-cloud-deployer-nomad</name>
 	<description>Spring Cloud Deployer for Nomad</description>
 
+	<scm>
+		<connection>scm:git:git@github.com:donovanmuller/spring-cloud-deployer-nomad.git</connection>
+		<developerConnection>scm:git:git@github.com:donovanmuller/spring-cloud-deployer-nomad.git</developerConnection>
+		<url>https://github.com/donovanmuller/spring-cloud-deployer-nomad</url>
+		<tag>HEAD</tag>
+	</scm>
+
 	<properties>
 		<!-- for Java 8 support -->
 		<java.version>1.8</java.version>
 		<animal.sniffer.skip>true</animal.sniffer.skip>
 
-		<nomad-client.version>0.3</nomad-client.version>
+		<nomad-client.version>0.4</nomad-client.version>
 		<spring-cloud-deployer.version>1.1.1.RELEASE</spring-cloud-deployer.version>
 	</properties>
 
@@ -38,6 +45,11 @@
 				<artifactId>spring-cloud-deployer-resource-docker</artifactId>
 				<version>${spring-cloud-deployer.version}</version>
 			</dependency>
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-deployer-resource-maven</artifactId>
+				<version>${spring-cloud-deployer.version}</version>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
 
@@ -51,6 +63,10 @@
 			<artifactId>spring-cloud-deployer-resource-docker</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-deployer-resource-maven</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
@@ -58,6 +74,11 @@
 			<groupId>io.github.zanella.nomad</groupId>
 			<artifactId>nomad-api</artifactId>
 			<version>${nomad-client.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-consul</artifactId>
+			<version>1.1.2.RELEASE</version>
 		</dependency>
 
 		<!-- Test -->
@@ -78,6 +99,32 @@
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-release-plugin</artifactId>
+				<version>2.5.3</version>
+				<configuration>
+					<autoVersionSubmodules>true</autoVersionSubmodules>
+				</configuration>
+			</plugin>
+			<plugin>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<configuration>
+					<skip>true</skip>
+				</configuration>
+			</plugin>
+			<plugin>
+				<artifactId>maven-site-plugin</artifactId>
+				<configuration>
+					<skip>true</skip>
+					<skipDeploy>true</skipDeploy>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
 
 	<profiles>
 		<profile>
@@ -127,5 +174,39 @@
 				</pluginRepository>
 			</pluginRepositories>
 		</profile>
+		<profile>
+			<id>release-sign-artifacts</id>
+			<activation>
+				<property>
+					<name>performRelease</name>
+					<value>true</value>
+				</property>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-gpg-plugin</artifactId>
+						<version>1.6</version>
+						<executions>
+							<execution>
+								<id>sign-artifacts</id>
+								<phase>verify</phase>
+								<goals>
+									<goal>sign</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
 	</profiles>
+
+	<distributionManagement>
+		<repository>
+			<id>bintray-switchbit-public</id>
+			<url>https://api.bintray.com/maven/donovanmuller/switchbit-public/spring-cloud-deployer-nomad/;publish=1</url>
+		</repository>
+	</distributionManagement>
 </project>

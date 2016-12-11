@@ -1,4 +1,4 @@
-package org.springframework.cloud.deployer.spi.nomad.docker;
+package org.springframework.cloud.deployer.spi.nomad.maven;
 
 import static java.util.stream.Collectors.toList;
 
@@ -18,19 +18,15 @@ import io.github.zanella.nomad.v1.nodes.models.TaskGroup;
 /**
  * Deployer responsible for deploying
  * {@link org.springframework.cloud.deployer.resource.docker.DockerResource} based applications
- * using the Nomad <a href="https://www.nomadproject.io/docs/drivers/docker.html">Docker</a> driver.
+ * using the Nomad <a href="https://www.nomadproject.io/docs/drivers/java.html">Java</a> driver.
  *
- * This implementation adds support for partitioned/indexed applications. Each indexed application
- * is configured as a separate TaskGroup, allowing each application instance to be scheduled on a
- * different client. If implemented as separate tasks, the application instance would be scheduled
- * on the same client, which might not be ideal. See
- * https://www.nomadproject.io/docs/internals/architecture.html
+ * See {@link org.springframework.cloud.deployer.spi.nomad.docker.IndexingDockerNomadAppDeployer}
  *
  * @author Donovan Muller
  */
-public class IndexingDockerNomadAppDeployer extends DockerNomadAppDeployer {
+public class IndexingMavenNomadAppDeployer extends MavenNomadAppDeployer {
 
-	public IndexingDockerNomadAppDeployer(NomadClient client, NomadDeployerProperties deployerProperties) {
+	public IndexingMavenNomadAppDeployer(NomadClient client, NomadDeployerProperties deployerProperties) {
 		super(client, deployerProperties);
 	}
 

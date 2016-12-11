@@ -2,6 +2,9 @@ package org.springframework.cloud.deployer.spi.nomad.docker;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +14,9 @@ import org.springframework.cloud.deployer.spi.nomad.NomadDeployerProperties;
 import org.springframework.cloud.deployer.spi.task.LaunchState;
 import org.springframework.cloud.deployer.spi.task.TaskLauncher;
 import org.springframework.cloud.deployer.spi.task.TaskStatus;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.github.zanella.nomad.NomadClient;
 import io.github.zanella.nomad.v1.jobs.models.JobAllocation;
@@ -30,120 +36,142 @@ import io.github.zanella.nomad.v1.nodes.models.TaskGroup;
  */
 public class DockerNomadTaskLauncher extends AbstractDockerNomadDeployer implements TaskLauncher {
 
-	private static final Logger log = LoggerFactory.getLogger(DockerNomadTaskLauncher.class);
+	private static Logger logger = LoggerFactory.getLogger(DockerNomadTaskLauncher.class);
 
 	private NomadClient client;
 	private NomadDeployerProperties deployerProperties;
 
-	public DockerNomadTaskLauncher(NomadClient nomadClient, NomadDeployerProperties deployerProperties) {
-		client = nomadClient;
+	public DockerNomadTaskLauncher(NomadClient client, NomadDeployerProperties deployerProperties) {
+		super(client, deployerProperties);
+
+		this.client = client;
 		this.deployerProperties = deployerProperties;
 	}
 
 	@Override
 	public String launch(AppDeploymentRequest request) {
 		String taskId = createTaskId(request);
+
 		JobSpec jobSpec = buildBatchJobSpec(taskId, deployerProperties, request);
 		jobSpec.setTaskGroups(buildTaskGroups(taskId, request, deployerProperties));
 
 		JobEvalResult jobEvalResult = client.v1.jobs.postJob(jobSpec);
-		log.info("Launched task '{}': {}", taskId, jobEvalResult);
+		logger.info("Launched task '{}': {}", taskId, jobEvalResult);
 
 		return taskId;
 	}
 
 	@Override
 	public void cancel(String taskId) {
-		log.info("Cancelling task '{}'", taskId);
+		logger.info("Cancelling task '{}'", taskId);
 		JobSummary job = getJobByName(taskId);
-		client.v1.job.deleteJob(job.getId());
+		if (job != null) {
+			client.v1.job.deleteJob(job.getId());
+		}
 	}
 
 	@Override
 	public TaskStatus status(String taskId) {
 		JobSummary job = getJobByName(taskId);
-		JobAllocation allocation = getAllocationEvaluation(client, job);
-		return buildTaskStatus(taskId, allocation);
+		if (job == null) {
+			return new TaskStatus(taskId, LaunchState.unknown, new HashMap<>());
+		}
+
+		List<JobAllocation> allocations = getAllocationEvaluation(client, job);
+		return buildTaskStatus(taskId, allocations.stream().findFirst().orElse(null));
 	}
 
 	@Override
-	public void cleanup(final String s) {
-		// TODO
+	public void cleanup(String taskId) {
+		cancel(taskId);
 	}
 
 	@Override
-	public void destroy(final String s) {
-		// TODO
+	public void destroy(String taskId) {
+		cancel(taskId);
 	}
 
 	/**
 	 * Multiple instances of tasks are not currently supported.
 	 */
 	@Override
-	protected Integer getAppCount(final AppDeploymentRequest request) {
+	protected Integer getAppCount(AppDeploymentRequest request) {
 		return 1;
 	}
 
-	/**
-	 * Adjust the restart policy for batch jobs. I.e they should not restart on failure.
-	 *
-	 * TODO currently this does not seem to be working when run from the tests
-	 */
 	@Override
-	protected TaskGroup buildTaskGroup(final String appId, final AppDeploymentRequest request,
-			final NomadDeployerProperties deployerProperties, final int count) {
+	protected TaskGroup buildTaskGroup(String appId, AppDeploymentRequest request,
+			NomadDeployerProperties deployerProperties, int count) {
 		TaskGroup taskGroup = super.buildTaskGroup(appId, request, deployerProperties, count);
-
-		taskGroup.setRestartPolicy(
-				new TaskGroup.RestartPolicy(milliToNanoseconds(0L), milliToNanoseconds(0L), 1, "fail"));
+		TaskGroup.RestartPolicy restartPolicy = taskGroup.getRestartPolicy();
+		restartPolicy.setMode("fail");
+		restartPolicy.setAttempts(1);
 
 		return taskGroup;
 	}
 
-	/**
-	 * A task does not require health checks/service discovery and therefore a Service is not
-	 * condigured. See https://www.nomadproject.io/docs/jobspec/servicediscovery.html
-	 */
+	@Override
 	protected Task buildTask(AppDeploymentRequest request, String appId) {
-		Task task = new Task();
-		task.setName(appId);
-		task.setDriver("docker");
-		Task.Config config = new Task.Config();
+		Task.TaskBuilder taskBuilder = Task.builder();
+		taskBuilder.name(appId);
+		taskBuilder.driver("docker");
+		Task.Config.ConfigBuilder configBuilder = Task.Config.builder();
 		try {
-			config.setImage(request.getResource().getURI().getSchemeSpecificPart());
+			configBuilder.image(request.getResource().getURI().getSchemeSpecificPart());
 		}
 		catch (IOException e) {
 			throw new IllegalArgumentException("Unable to get URI for " + request.getResource(), e);
 		}
 
-		// according to the Nomad documentation, you cannot pass command like arguments to a Docker
-		// container without also specifying a command, however, it is possible. See
-		// https://www.nomadproject.io/docs/drivers/docker.html#args
-		// Issue logged: https://github.com/hashicorp/nomad/issues/1813
-		config.setArgs(request.getCommandlineArguments());
-		task.setConfig(config);
-
-		HashMap<String, String> env = new HashMap<>();
-		env.putAll(createEnvironmentVariables(deployerProperties, request));
-		task.setEnv(env);
-
-		task.setResources(new Resources(getCpuResource(deployerProperties, request),
+		taskBuilder.resources(new Resources(getCpuResource(deployerProperties, request),
 				getMemoryResource(deployerProperties, request),
 				// deprecated, use
 				// org.springframework.cloud.deployer.spi.nomad.NomadDeployerProperties.EphemeralDisk
 				null, 0, null));
 
-		task.setLogConfig(new Task.LogConfig(deployerProperties.getLoggingMaxFiles(),
+		HashMap<String, String> env = new HashMap<>();
+		env.putAll(getAppEnvironmentVariables(request));
+		env.putAll(arrayToMap(deployerProperties.getEnvironmentVariables()));
+
+		// See
+		// https://github.com/spring-cloud/spring-cloud-deployer-kubernetes/blob/master/src/main/java/org/springframework/cloud/deployer/spi/kubernetes/DefaultContainerFactory.java#L91
+		EntryPointStyle entryPointStyle = determineEntryPointStyle(deployerProperties, request);
+		switch (entryPointStyle) {
+		case exec:
+			configBuilder.args(createCommandLineArguments(request));
+			break;
+		case boot:
+			if (env.containsKey("SPRING_APPLICATION_JSON")) {
+				throw new IllegalStateException(
+						"You can't use boot entry point style and also set SPRING_APPLICATION_JSON for the app");
+			}
+			try {
+				env.put("SPRING_APPLICATION_JSON",
+						new ObjectMapper().writeValueAsString(request.getDefinition().getProperties()));
+			}
+			catch (JsonProcessingException e) {
+				throw new IllegalStateException("Unable to create SPRING_APPLICATION_JSON", e);
+			}
+			break;
+		case shell:
+			for (String key : request.getDefinition().getProperties().keySet()) {
+				String envVar = key.replace('.', '_').toUpperCase();
+				env.put(envVar, request.getDefinition().getProperties().get(key));
+			}
+			break;
+		}
+
+		taskBuilder.config(configBuilder.build());
+		taskBuilder.env(env);
+
+		taskBuilder.logConfig(new Task.LogConfig(deployerProperties.getLoggingMaxFiles(),
 				deployerProperties.getLoggingMaxFileSize()));
 
-		return task;
+		return taskBuilder.build();
 	}
 
-	protected JobAllocation getAllocationEvaluation(NomadClient client, JobSummary jobSummary) {
-		return client.v1.job.getJobAllocations(jobSummary.getId()).stream()
-				.sorted((o1, o2) -> o2.getCreateIndex().compareTo(o1.getCreateIndex())).findFirst()
-				.orElseThrow(() -> new IllegalStateException(
-						String.format("Job '%s' does not have any allocations", jobSummary.getName())));
+	protected List<JobAllocation> getAllocationEvaluation(NomadClient client, JobSummary jobSummary) {
+		return client.v1.job.getJobAllocations(jobSummary.getId());
 	}
 
 	protected TaskStatus buildTaskStatus(String id, JobAllocation allocation) {
@@ -186,9 +214,17 @@ public class DockerNomadTaskLauncher extends AbstractDockerNomadDeployer impleme
 		return String.format("%s-%d", taskId.replace('.', '-'), System.currentTimeMillis());
 	}
 
-	private JobSummary getJobByName(final String taskId) {
-		return client.v1.jobs.getJobs().stream().filter(jobSummary -> jobSummary.getName().equals(taskId)).findFirst()
-				.orElseThrow(
-						() -> new IllegalStateException(String.format("Job with name '%s' does not exist", taskId)));
+	protected List<String> createCommandLineArguments(AppDeploymentRequest request) {
+		List<String> commandlineArguments = new LinkedList<>();
+		// add properties from deployment request
+		Map<String, String> args = request.getDefinition().getProperties();
+		for (Map.Entry<String, String> entry : args.entrySet()) {
+			commandlineArguments.add(String.format("--%s=%s", entry.getKey(), entry.getValue()));
+		}
+		// add provided command line args
+		commandlineArguments.addAll(request.getCommandlineArguments());
+
+		logger.debug("Using command args: " + commandlineArguments);
+		return commandlineArguments;
 	}
 }

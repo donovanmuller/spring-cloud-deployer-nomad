@@ -22,7 +22,7 @@ public class AbstractDockerNomadDeployerTest {
 
 	@Before
 	public void setup() {
-		deployer = new AbstractDockerNomadDeployer() {
+		deployer = new AbstractDockerNomadDeployer(null, new NomadDeployerProperties()) {
 
 			@Override
 			protected Integer getAppCount(final AppDeploymentRequest request) {

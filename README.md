@@ -18,11 +18,11 @@ Huge thanks for the already having done all the hard work.
 
 ## Building
 
-If you don't have a Nomad instance available to run the integration tests as part of the build, 
-you can skip the tests and build the Nomad deployer with:
+If you don't have a Nomad/Consul instance available to run the integration tests as part of the build, 
+you can skip the integration tests and build the Nomad deployer with:
 
 ```bash
-$ ./mvnw install -DskipTests 
+$ ./mvnw install -Dnomad.enabled=false
 ```
 
 ## Integration tests
@@ -56,12 +56,16 @@ Assuming you have access to a Nomad instance (see above if you don't), you can r
 ```bash
 $ ./mvnw test \
   -Dspring.cloud.deployer.nomad.nomadHost=172.16.0.2 \
-  -Dspring.cloud.deployer.nomad.nomadPort=4646
+  -Dspring.cloud.deployer.nomad.nomadPort=4646 \
+  -Dspring.cloud.deployer.nomad.deployerHost=<local machines IP>
 ```
 
 where `-Dspring.cloud.deployer.nomad.nomadHost` and `-Dspring.cloud.deployer.nomad.port` 
-optionally specify the host and port where a Nomad client is listening.
-The default values are `localhost` and `4646` respectively.
+optionally specify the host and port where a Nomad client is listening.  The default values are `localhost` and `4646` respectively.
+
+The `spring.cloud.deployer.nomad.deployerHost`
+value must be set for the Maven resource support. The value should be the accessible (from the VM) IP address of your local machine
+from where you run the tests.
 
 
 

@@ -1,0 +1,6 @@
+server:
+  port: 9393 # default Data Flow Server port
+
+spring:
+  main:
+    banner-mode: "off"

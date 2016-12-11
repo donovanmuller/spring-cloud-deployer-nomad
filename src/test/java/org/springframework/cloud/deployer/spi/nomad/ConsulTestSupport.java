@@ -1,28 +1,29 @@
 package org.springframework.cloud.deployer.spi.nomad;
 
 import org.springframework.boot.Banner;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.cloud.consul.ConditionalOnConsulEnabled;
+import org.springframework.cloud.consul.ConsulAutoConfiguration;
 import org.springframework.cloud.deployer.resource.maven.MavenProperties;
 import org.springframework.cloud.deployer.spi.test.junit.AbstractExternalResourceTestSupport;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 
-import io.github.zanella.nomad.NomadClient;
+import com.ecwid.consul.v1.ConsulClient;
 
 /**
- * JUnit {@link org.junit.Rule} that detects the fact that a Nomad instance is available.
+ * JUnit {@link org.junit.Rule} that detects the fact that a Consul instance is available.
  *
  * @author Donovan Muller
  */
-public class NomadTestSupport extends AbstractExternalResourceTestSupport<NomadClient> {
+public class ConsulTestSupport extends AbstractExternalResourceTestSupport<ConsulClient> {
 
 	private ConfigurableApplicationContext context;
 
-	public NomadTestSupport() {
-		super("NOMAD");
+	public ConsulTestSupport() {
+		super("CONSUL");
 	}
 
 	@Override
@@ -37,14 +38,14 @@ public class NomadTestSupport extends AbstractExternalResourceTestSupport<NomadC
 			.bannerMode(Banner.Mode.OFF)
 			.web(false)
 			.run();
-		resource = context.getBean(NomadClient.class);
-		resource.v1.status.getLeader();
 		//@formatter:on
+		resource = context.getBean(ConsulClient.class);
+		resource.getAgentSelf().getConsulLastContact();
 	}
 
 	@TestConfiguration
-	@Import(NomadAutoConfiguration.class)
-	@ConditionalOnProperty(value = "nomad.enabled", matchIfMissing = true)
+	@Import({ ConsulAutoConfiguration.class, NomadAutoConfiguration.class })
+	@ConditionalOnConsulEnabled
 	public static class Config {
 
 		@Bean

@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.validation.constraints.NotNull;
+
+import org.springframework.boot.context.embedded.EmbeddedServletContainer;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cloud.deployer.spi.nomad.docker.EntryPointStyle;
 
@@ -22,7 +25,7 @@ public class NomadDeployerProperties {
 
 		/**
 		 * The <a href="https://www.nomadproject.io/docs/jobspec/json.html#CPU">CPU</a> required in
-		 * MHz. Default is 1000MHz;
+		 * MHz. Default is 1000MHz.
 		 */
 		private String cpu = "1000";
 
@@ -38,8 +41,9 @@ public class NomadDeployerProperties {
 		private String memory = "512";
 
 		/**
-		 * The number of <a href="https://www.nomadproject.io/docs/jobspec/json.html#MBits">MBits</a> in
-		 * bandwidth required.
+		 * The number of
+		 * <a href="https://www.nomadproject.io/docs/jobspec/json.html#MBits">MBits</a> in bandwidth
+		 * required.
 		 */
 		private Integer networkMBits = 10;
 
@@ -75,6 +79,7 @@ public class NomadDeployerProperties {
 		public void setNetworkMBits(final Integer networkMBits) {
 			this.networkMBits = networkMBits;
 		}
+
 	}
 
 	/**
@@ -121,6 +126,7 @@ public class NomadDeployerProperties {
 		public void setSize(Integer size) {
 			this.size = size;
 		}
+
 	}
 
 	/**
@@ -161,12 +167,6 @@ public class NomadDeployerProperties {
 	 * <a href="https://github.com/eBay/fabio">Fabio</a>
 	 */
 	private boolean exposeViaFabio;
-
-	/**
-	 * The default route hostname to use for Fabio exposed apps. The default is to use a blank
-	 * value, so that the <code>appId</code> alone is the host.
-	 */
-	private String defaultFabioRouteHostname = "";
 
 	/**
 	 * The <a href="https://www.nomadproject.io/docs/jobspec/json.html#Path">path</a> of the http
@@ -210,23 +210,24 @@ public class NomadDeployerProperties {
 	/**
 	 * A duration to wait before restarting a task. See
 	 * https://www.nomadproject.io/docs/jobspec/json.html#Delay. Specified in <b>milliseconds</b>.
-	 * Default is 25000 milliseconds (25 seconds).
+	 * Default is 30000 milliseconds (30 seconds).
 	 */
-	private Long restartPolicyDelay = 25000L;
+	private Long restartPolicyDelay = 30000L;
 
 	/**
-	 * The Interval begins when the first task starts and ensures that only Attempts number of
-	 * restarts happens within it. See https://www.nomadproject.io/docs/jobspec/json.html#Interval.
-	 * Specified in <b>milliseconds</b>. Default is 300000 milliseconds (300 seconds / 5 minutes).
+	 * The Interval begins when the first task starts and ensures that only X number of attempts
+	 * number of restarts happens within it. See
+	 * https://www.nomadproject.io/docs/jobspec/json.html#Interval. Specified in
+	 * <b>milliseconds</b>. Default is 120000 milliseconds (120 seconds / 3 minutes).
 	 */
 	private Long restartPolicyInterval = 300000L;
 
 	/**
 	 * Attempts is the number of restarts allowed in an Interval. See
-	 * https://www.nomadproject.io/docs/jobspec/json.html#Attempts. Default is 10 attempts within 5
+	 * https://www.nomadproject.io/docs/jobspec/json.html#Attempts. Default is 3 attempts within 3
 	 * minutes (see {@link NomadDeployerProperties#restartPolicyInterval)
 	 */
-	private Integer restartPolicyAttempts = 10;
+	private Integer restartPolicyAttempts = 3;
 
 	/**
 	 * Mode is given as a string and controls the behavior when the task fails more than Attempts
@@ -235,11 +236,11 @@ public class NomadDeployerProperties {
 	 * Possible values are:
 	 *
 	 * <ul>
-	 * <li>delay (default)</li>
-	 * <li>fail</li>
+	 * <li>delay</li>
+	 * <li>fail (default)</li>
 	 * </ul>
 	 */
-	private String restartPolicyMode = "delay";
+	private String restartPolicyMode = "fail";
 
 	/**
 	 * Entry point style used for the Docker image. To be used to determine how to pass in
@@ -256,6 +257,58 @@ public class NomadDeployerProperties {
 	 * <code>spring.cloud.deployer.nomad=/opt/data:/data,/opt/config:/config</code>
 	 */
 	private List<String> volumes = new ArrayList<>();
+
+	/**
+	 * The destination (path) where artifacts will be downloaded by default. Only applicable to the
+	 * Maven resource deployer implementation. Default value is <code>local</code>. See
+	 * https://www.nomadproject.io/docs/job-specification/artifact.html#destination
+	 */
+	private String artifactDestination = "local";
+
+	/**
+	 * A comma separated list of default Java options to pass to the JVM. Only applicable to the
+	 * Maven resource deployer implementation. See
+	 * http://docs.spring.io/spring-cloud-dataflow/docs/current/reference/htmlsingle/index.html#getting-started-application-configuration
+	 * for reference.
+	 */
+	private String javaOpts;
+
+	/**
+	 * The URI scheme that the deployer server is running on. When deploying Maven resource based
+	 * apps the artifact source URL includes the servers host and port. This property value is used
+	 * when constructing the source URL. Only applicable to the Maven resource deployer
+	 * implementation. See https://www.nomadproject.io/docs/job-specification/artifact.html#source
+	 */
+	private String deployerScheme = "http";
+
+	/**
+	 * The resolvable hostname of IP address that the deployer server is running on. When deploying
+	 * Maven resource based apps the artifact source URL includes the servers host and port. This
+	 * property value is used when constructing the source URL. Only applicable to the Maven
+	 * resource deployer implementation. See
+	 * https://www.nomadproject.io/docs/job-specification/artifact.html#source
+	 */
+	@NotNull(message = "Please configure the resolvable hostname or IP address that this server is running on. E.g. spring.cloud.deployer.nomad.deployerHost=192.168.1.10")
+	private String deployerHost;
+
+	/**
+	 * The port that the deployer server is listening on. When deploying Maven resource based apps
+	 * the artifact source URL includes the servers host and port. This property value is used when
+	 * constructing the source URL. Only applicable to the Maven resource deployer implementation.
+	 * See https://www.nomadproject.io/docs/job-specification/artifact.html#source
+	 * <p>
+	 * <b>If this property is not set then the port from {@link EmbeddedServletContainer#getPort()}
+	 * will be used</b>
+	 */
+	private Integer deployerPort;
+
+	/**
+	 * If set, the allocated node must support at least this version of a Java runtime environment.
+	 * E.g. '1.8' for a minimum of a Java 8 JRE/JDK. See
+	 * https://www.nomadproject.io/docs/drivers/java.html#driver_java_version. Only applicable to
+	 * the Maven resource deployer implementation.
+	 */
+	private String minimumJavaVersion;
 
 	public String getNomadHost() {
 		return nomadHost;
@@ -311,14 +364,6 @@ public class NomadDeployerProperties {
 
 	public void setExposeViaFabio(boolean exposeViaFabio) {
 		this.exposeViaFabio = exposeViaFabio;
-	}
-
-	public String getDefaultFabioRouteHostname() {
-		return defaultFabioRouteHostname;
-	}
-
-	public void setDefaultFabioRouteHostname(String defaultFabioRouteHostname) {
-		this.defaultFabioRouteHostname = defaultFabioRouteHostname;
 	}
 
 	public String getCheckHttpPath() {
@@ -425,4 +470,51 @@ public class NomadDeployerProperties {
 		this.volumes = volumes;
 	}
 
+	public String getArtifactDestination() {
+		return artifactDestination;
+	}
+
+	public void setArtifactDestination(final String artifactDestination) {
+		this.artifactDestination = artifactDestination;
+	}
+
+	public String getJavaOpts() {
+		return javaOpts;
+	}
+
+	public void setJavaOpts(final String javaOpts) {
+		this.javaOpts = javaOpts;
+	}
+
+	public String getDeployerScheme() {
+		return deployerScheme;
+	}
+
+	public void setDeployerScheme(final String deployerScheme) {
+		this.deployerScheme = deployerScheme;
+	}
+
+	public String getDeployerHost() {
+		return deployerHost;
+	}
+
+	public void setDeployerHost(final String deployerHost) {
+		this.deployerHost = deployerHost;
+	}
+
+	public Integer getDeployerPort() {
+		return deployerPort;
+	}
+
+	public void setDeployerPort(final Integer deployerPort) {
+		this.deployerPort = deployerPort;
+	}
+
+	public String getMinimumJavaVersion() {
+		return minimumJavaVersion;
+	}
+
+	public void setMinimumJavaVersion(final String minimumJavaVersion) {
+		this.minimumJavaVersion = minimumJavaVersion;
+	}
 }

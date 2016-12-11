@@ -13,11 +13,11 @@ import org.springframework.util.Assert;
  */
 public interface NomadSupport {
 
-	default Map<String, String> commandLineArgumentsToMap(String[] properties) {
-		return commandLineArgumentsToMap(Arrays.asList(properties));
+	default Map<String, String> arrayToMap(String[] properties) {
+		return arrayToMap(Arrays.asList(properties));
 	}
 
-	default Map<String, String> commandLineArgumentsToMap(List<String> properties) {
+	default Map<String, String> arrayToMap(List<String> properties) {
 		Map<String, String> map = new HashMap<>();
 		for (String property : properties) {
 			String[] strings = property.split("=", 2);

@@ -77,4 +77,11 @@ public interface NomadDeploymentPropertyKeys {
 	 * 300MB. See https://www.nomadproject.io/docs/job-specification/ephemeral_disk.html
 	 */
 	String NOMAD_EPHEMERAL_DISK_SIZE = "spring.cloud.deployer.nomad.ephemeralDisk.size";
+
+	/**
+	 * A comma seperated list of Java options to pass to the JVM. See
+	 * http://docs.spring.io/spring-cloud-dataflow/docs/current/reference/htmlsingle/index.html#getting-started-application-configuration
+	 * for reference.
+	 */
+	String NOMAD_JAVA_OPTS = "spring.cloud.deployer.nomad.javaOpts";
 }
