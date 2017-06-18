@@ -16,6 +16,7 @@ import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.app.DeploymentState;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
 import org.springframework.cloud.deployer.spi.nomad.AbstractNomadDeployer;
 import org.springframework.cloud.deployer.spi.nomad.NomadDeployerProperties;
 import org.springframework.cloud.deployer.spi.nomad.NomadDeploymentPropertyKeys;
@@ -86,6 +87,11 @@ public class MavenNomadAppDeployer extends AbstractNomadDeployer implements AppD
 
 		List<JobAllocation> allocations = getAllocationEvaluation(client, job);
 		return buildAppStatus(deploymentId, allocations);
+	}
+
+	@Override
+	public RuntimeEnvironmentInfo environmentInfo() {
+		return createRuntimeEnvironmentInfo(AppDeployer.class, this.getClass());
 	}
 
 	@Override

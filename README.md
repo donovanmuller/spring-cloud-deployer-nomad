@@ -1,4 +1,4 @@
-# Spring Cloud Data Flow Nomad
+# Spring Cloud Data Flow Nomad [![Build Status](https://travis-ci.org/donovanmuller/spring-cloud-deployer-nomad.svg?branch=master)](https://travis-ci.org/donovanmuller/spring-cloud-deployer-nomad)
 
 An implementation of the [spring-cloud-deployer](https://github.com/spring-cloud/spring-cloud-deployer) 
 SPI for scheduling applications with [Hashicorp Nomad](https://www.nomadproject.io/).
@@ -57,7 +57,8 @@ Assuming you have access to a Nomad instance (see above if you don't), you can r
 $ ./mvnw test \
   -Dspring.cloud.deployer.nomad.nomadHost=172.16.0.2 \
   -Dspring.cloud.deployer.nomad.nomadPort=4646 \
-  -Dspring.cloud.deployer.nomad.deployerHost=<local machines IP>
+  -Dspring.cloud.deployer.nomad.deployerHost=<local machines IP> \
+  -Dspring.cloud.consul.host=<local machines IP>
 ```
 
 where `-Dspring.cloud.deployer.nomad.nomadHost` and `-Dspring.cloud.deployer.nomad.port` 

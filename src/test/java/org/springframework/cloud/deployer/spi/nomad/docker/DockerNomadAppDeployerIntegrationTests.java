@@ -48,7 +48,7 @@ public class DockerNomadAppDeployerIntegrationTests extends AbstractAppDeployerI
 	}
 
 	@Override
-	protected AppDeployer appDeployer() {
+	protected AppDeployer provideAppDeployer() {
 		return appDeployer;
 	}
 

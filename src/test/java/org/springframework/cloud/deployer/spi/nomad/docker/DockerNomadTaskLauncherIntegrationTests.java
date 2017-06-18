@@ -55,7 +55,7 @@ public class DockerNomadTaskLauncherIntegrationTests extends AbstractTaskLaunche
 	}
 
 	@Override
-	protected TaskLauncher taskLauncher() {
+	protected TaskLauncher provideTaskLauncher() {
 		return taskLauncher;
 	}
 

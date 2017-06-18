@@ -16,6 +16,7 @@ import org.springframework.cloud.deployer.spi.app.AppInstanceStatus;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.app.DeploymentState;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
 import org.springframework.cloud.deployer.spi.nomad.NomadDeployerProperties;
 import org.springframework.cloud.deployer.spi.nomad.NomadSupport;
 
@@ -72,6 +73,12 @@ public class DockerNomadAppDeployer extends AbstractDockerNomadDeployer implemen
 	@Override
 	public void undeploy(String deploymentId) {
 		logger.info("Undeploying job '{}'", deploymentId);
+
+		AppStatus status = status(deploymentId);
+		if (status.getState().equals(DeploymentState.unknown)) {
+			throw new IllegalStateException(String.format("App '%s' is not deployed", deploymentId));
+		}
+
 		JobSummary job = getJobByName(deploymentId);
 		client.v1.job.deleteJob(job.getId());
 	}
@@ -108,6 +115,11 @@ public class DockerNomadAppDeployer extends AbstractDockerNomadDeployer implemen
 		}
 
 		return appStatus;
+	}
+
+	@Override
+	public RuntimeEnvironmentInfo environmentInfo() {
+		return createRuntimeEnvironmentInfo(AppDeployer.class, this.getClass());
 	}
 
 	@Override

@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.deployer.resource.maven.MavenResource;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
 import org.springframework.cloud.deployer.spi.nomad.docker.DockerNomadTaskLauncher;
 import org.springframework.cloud.deployer.spi.nomad.maven.MavenNomadTaskLauncher;
 import org.springframework.cloud.deployer.spi.task.TaskLauncher;
@@ -60,5 +61,10 @@ public class ResourceAwareNomadTaskLauncher implements TaskLauncher {
 	@Override
 	public void destroy(final String taskId) {
 		dockerTaskLauncher.destroy(taskId);
+	}
+
+	@Override
+	public RuntimeEnvironmentInfo environmentInfo() {
+		return dockerTaskLauncher.environmentInfo();
 	}
 }

@@ -6,6 +6,7 @@ import org.springframework.cloud.deployer.resource.maven.MavenResource;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
 import org.springframework.cloud.deployer.spi.nomad.docker.DockerNomadAppDeployer;
 import org.springframework.cloud.deployer.spi.nomad.maven.MavenNomadAppDeployer;
 
@@ -50,5 +51,10 @@ public class ResourceAwareNomadAppDeployer implements AppDeployer {
 	@Override
 	public AppStatus status(String appId) {
 		return dockerAppDeployer.status(appId);
+	}
+
+	@Override
+	public RuntimeEnvironmentInfo environmentInfo() {
+		return dockerAppDeployer.environmentInfo();
 	}
 }

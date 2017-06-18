@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
 import org.springframework.cloud.deployer.spi.nomad.NomadDeployerProperties;
 import org.springframework.cloud.deployer.spi.task.LaunchState;
 import org.springframework.cloud.deployer.spi.task.TaskLauncher;
@@ -89,6 +90,11 @@ public class DockerNomadTaskLauncher extends AbstractDockerNomadDeployer impleme
 	@Override
 	public void destroy(String taskId) {
 		cancel(taskId);
+	}
+
+	@Override
+	public RuntimeEnvironmentInfo environmentInfo() {
+		return createRuntimeEnvironmentInfo(AppDeployer.class, this.getClass());
 	}
 
 	/**

@@ -5,12 +5,12 @@
 	<parent>
 		<groupId>org.springframework.cloud</groupId>
 		<artifactId>spring-cloud-deployer-parent</artifactId>
-		<version>1.1.1.RELEASE</version>
+		<version>1.2.0.RELEASE</version>
 	</parent>
 
 	<groupId>org.springframework.cloud</groupId>
 	<artifactId>spring-cloud-deployer-nomad</artifactId>
-	<version>1.1.1.BUILD-SNAPSHOT</version>
+	<version>1.2.0.BUILD-SNAPSHOT</version>
 
 	<name>spring-cloud-deployer-nomad</name>
 	<description>Spring Cloud Deployer for Nomad</description>
@@ -27,8 +27,8 @@
 		<java.version>1.8</java.version>
 		<animal.sniffer.skip>true</animal.sniffer.skip>
 
-		<nomad-client.version>0.4</nomad-client.version>
-		<spring-cloud-deployer.version>1.1.1.RELEASE</spring-cloud-deployer.version>
+		<nomad-client.version>0.10-SNAPSHOT</nomad-client.version>
+		<spring-cloud-deployer.version>1.2.0.RELEASE</spring-cloud-deployer.version>
 	</properties>
 
 	<dependencyManagement>
@@ -89,11 +89,6 @@
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-deployer-spi-test</artifactId>
 			<version>${spring-cloud-deployer.version}</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-stream-test-support</artifactId>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

@@ -4,17 +4,24 @@ import static java.util.stream.Collectors.toList;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import io.github.zanella.nomad.v1.agent.models.Self;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
 import org.springframework.cloud.deployer.spi.util.ByteSizeUtils;
+import org.springframework.cloud.deployer.spi.util.RuntimeVersionUtils;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -47,6 +54,34 @@ public abstract class AbstractNomadDeployer implements NomadSupport {
 	protected AbstractNomadDeployer(NomadClient client, NomadDeployerProperties deployerProperties) {
 		this.client = client;
 		this.deployerProperties = deployerProperties;
+	}
+
+	/**
+	 * Create the RuntimeEnvironmentInfo.
+	 *
+	 * @return the Kubernetes runtime environment info
+	 */
+	protected RuntimeEnvironmentInfo createRuntimeEnvironmentInfo(Class spiClass, Class implementationClass) {
+		Set<String> hostVersions = client.v1.agent.getMembers().getMember().stream()
+			.peek(member -> System.err.println("Member: " + member))
+			.map(member -> member.getTags().get("build"))
+			.collect(Collectors.toSet());
+
+		RuntimeEnvironmentInfo.Builder runtimeEnvironment = new RuntimeEnvironmentInfo.Builder()
+			.spiClass(spiClass)
+			.implementationName(implementationClass.getSimpleName())
+			.implementationVersion(RuntimeVersionUtils.getVersion(implementationClass))
+			.platformType("Hashicorp Nomad")
+			.platformApiVersion("v1")
+			.platformClientVersion(RuntimeVersionUtils.getVersion(client.getClass()))
+			.platformHostVersion(StringUtils.collectionToCommaDelimitedString(hostVersions));
+
+		client.v1.agent.getMembers().getMember().forEach(member -> runtimeEnvironment
+            .addPlatformSpecificInfo(String.format("%s-build", member.getName()), member.getTags().get("build"))
+            .addPlatformSpecificInfo(String.format("%s-region", member.getName()), member.getTags().get("region"))
+            .addPlatformSpecificInfo(String.format("%s-datacenter", member.getName()), member.getTags().get("dc")));
+
+		return runtimeEnvironment.build();
 	}
 
 	protected abstract Task buildTask(AppDeploymentRequest request, String deploymentId);

@@ -8,6 +8,7 @@ import java.util.stream.Stream;
 
 import org.springframework.cloud.deployer.resource.maven.MavenResource;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.cloud.deployer.spi.core.RuntimeEnvironmentInfo;
 import org.springframework.cloud.deployer.spi.nomad.NomadDeployerProperties;
 import org.springframework.cloud.deployer.spi.nomad.NomadDeploymentPropertyKeys;
 import org.springframework.cloud.deployer.spi.nomad.docker.DockerNomadTaskLauncher;
@@ -74,5 +75,10 @@ public class MavenNomadTaskLauncher extends DockerNomadTaskLauncher implements T
 				deployerProperties.getLoggingMaxFileSize()));
 
 		return taskBuilder.build();
+	}
+
+	@Override
+	public RuntimeEnvironmentInfo environmentInfo() {
+		return createRuntimeEnvironmentInfo(TaskLauncher.class, this.getClass());
 	}
 }
