@@ -4,6 +4,7 @@ import java.net.SocketException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureOrder;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.embedded.EmbeddedServletContainerInitializedEvent;
@@ -19,8 +20,10 @@ import org.springframework.cloud.deployer.spi.nomad.maven.MavenResourceResolver;
 import org.springframework.cloud.deployer.spi.task.TaskLauncher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.Ordered;
+import org.springframework.core.env.Environment;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import io.github.zanella.nomad.NomadClient;
@@ -65,6 +68,15 @@ public class NomadAutoConfiguration {
 	@ConditionalOnMissingBean
 	public MavenResourceController mavenResourceController(MavenResourceResolver mavenResourceResolver) {
 		return new MavenResourceController(mavenResourceResolver);
+	}
+
+	@Configuration
+	@PropertySource("classpath:runtime.properties")
+	public class RuntimeConfiguration {
+
+		public RuntimeConfiguration(Environment env, NomadDeployerProperties deployerProperties) {
+			deployerProperties.setRuntimePlatformVersion(env.getProperty("platformClientVersion"));
+		}
 	}
 
 	@Configuration

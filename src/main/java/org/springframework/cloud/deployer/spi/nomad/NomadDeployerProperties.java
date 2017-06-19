@@ -310,6 +310,11 @@ public class NomadDeployerProperties {
 	 */
 	private String minimumJavaVersion;
 
+	/**
+	 * See {@link org.springframework.cloud.deployer.spi.nomad.NomadAutoConfiguration.RuntimeConfiguration}
+	 */
+	private String runtimePlatformVersion;
+
 	public String getNomadHost() {
 		return nomadHost;
 	}
@@ -516,5 +521,13 @@ public class NomadDeployerProperties {
 
 	public void setMinimumJavaVersion(final String minimumJavaVersion) {
 		this.minimumJavaVersion = minimumJavaVersion;
+	}
+
+	public void setRuntimePlatformVersion(String runtimePlatformVersion) {
+		this.runtimePlatformVersion = runtimePlatformVersion;
+	}
+
+	public String getRuntimePlatformVersion() {
+		return runtimePlatformVersion;
 	}
 }

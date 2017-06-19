@@ -63,7 +63,6 @@ public abstract class AbstractNomadDeployer implements NomadSupport {
 	 */
 	protected RuntimeEnvironmentInfo createRuntimeEnvironmentInfo(Class spiClass, Class implementationClass) {
 		Set<String> hostVersions = client.v1.agent.getMembers().getMember().stream()
-			.peek(member -> System.err.println("Member: " + member))
 			.map(member -> member.getTags().get("build"))
 			.collect(Collectors.toSet());
 
@@ -73,7 +72,7 @@ public abstract class AbstractNomadDeployer implements NomadSupport {
 			.implementationVersion(RuntimeVersionUtils.getVersion(implementationClass))
 			.platformType("Hashicorp Nomad")
 			.platformApiVersion("v1")
-			.platformClientVersion(RuntimeVersionUtils.getVersion(client.getClass()))
+			.platformClientVersion(deployerProperties.getRuntimePlatformVersion())
 			.platformHostVersion(StringUtils.collectionToCommaDelimitedString(hostVersions));
 
 		client.v1.agent.getMembers().getMember().forEach(member -> runtimeEnvironment
