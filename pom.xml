@@ -27,7 +27,7 @@
 		<java.version>1.8</java.version>
 		<animal.sniffer.skip>true</animal.sniffer.skip>
 
-		<nomad-client.version>0.10-SNAPSHOT</nomad-client.version>
+		<nomad-client.version>0.10</nomad-client.version>
 		<spring-cloud-deployer.version>1.2.0.RELEASE</spring-cloud-deployer.version>
 	</properties>
 
