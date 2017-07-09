@@ -1,5 +1,17 @@
 # Change Log
 
+## [Unreleased](https://github.com/donovanmuller/spring-cloud-deployer-nomad/tree/HEAD)
+
+[Full Changelog](https://github.com/donovanmuller/spring-cloud-deployer-nomad/compare/v1.2.0.RELEASE...HEAD)
+
+**Closed issues:**
+
+- Update to Maven 3.5.0 [\#21](https://github.com/donovanmuller/spring-cloud-deployer-nomad/issues/21)
+- Update to 1.2.0 release of s-c-deployer [\#20](https://github.com/donovanmuller/spring-cloud-deployer-nomad/issues/20)
+
+## [v1.2.0.RELEASE](https://github.com/donovanmuller/spring-cloud-deployer-nomad/tree/v1.2.0.RELEASE) (2017-06-20)
+[Full Changelog](https://github.com/donovanmuller/spring-cloud-deployer-nomad/compare/v1.1.0.RELEASE...v1.2.0.RELEASE)
+
 ## [v1.1.0.RELEASE](https://github.com/donovanmuller/spring-cloud-deployer-nomad/tree/v1.1.0.RELEASE) (2016-12-13)
 **Closed issues:**
 
