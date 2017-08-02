@@ -303,6 +303,18 @@ public class NomadDeployerProperties {
 	private Integer deployerPort;
 
 	/**
+	 * If basic authentication is required.
+	 * See https://github.com/hashicorp/go-getter#http-http
+	 */
+	private String deployerUsername;
+
+	/**
+	 * If basic authentication is required.
+	 * See https://github.com/hashicorp/go-getter#http-http
+	 */
+	private String deployerPassword;
+
+	/**
 	 * If set, the allocated node must support at least this version of a Java runtime environment.
 	 * E.g. '1.8' for a minimum of a Java 8 JRE/JDK. See
 	 * https://www.nomadproject.io/docs/drivers/java.html#driver_java_version. Only applicable to
@@ -513,6 +525,22 @@ public class NomadDeployerProperties {
 
 	public void setDeployerPort(final Integer deployerPort) {
 		this.deployerPort = deployerPort;
+	}
+
+	public String getDeployerUsername() {
+		return deployerUsername;
+	}
+
+	public void setDeployerUsername(String deployerUsername) {
+		this.deployerUsername = deployerUsername;
+	}
+
+	public String getDeployerPassword() {
+		return deployerPassword;
+	}
+
+	public void setDeployerPassword(String deployerPassword) {
+		this.deployerPassword = deployerPassword;
 	}
 
 	public String getMinimumJavaVersion() {

@@ -148,7 +148,7 @@ public class DockerNomadAppDeployer extends AbstractDockerNomadDeployer implemen
 				null, 0, Stream.of(network).collect(toList())));
 
 		HashMap<String, String> env = new HashMap<>();
-		env.putAll(getAppEnvironmentVariables(request));
+		env.put("SPRING_CLOUD_APPLICATION_GUID", "${NOMAD_ALLOC_ID}");
 		env.putAll(arrayToMap(deployerProperties.getEnvironmentVariables()));
 
 		Map<String, Integer> portMap = new HashMap<>();

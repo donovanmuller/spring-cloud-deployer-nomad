@@ -51,4 +51,20 @@ public class MavenSupportTest implements MavenSupport {
 		assertThat(uri).isEqualTo(
 				"https://192.168.1.10:443/resources/maven/org.springframework.cloud.stream.app/time-source-kafka-1.1.0.RELEASE-exec.jar");
 	}
+
+	@Test
+	public void testToURIStringWithAuthentication() {
+		NomadDeployerProperties deployerProperties = new NomadDeployerProperties();
+		deployerProperties.setDeployerHost("192.168.1.10");
+		deployerProperties.setDeployerPort(9393);
+		deployerProperties.setDeployerUsername("test");
+		deployerProperties.setDeployerPassword("password");
+		MavenResource resource = MavenResource
+				.parse("org.springframework.cloud.stream.app:time-source-kafka:jar:exec:1.1.0.RELEASE");
+
+		String uri = toURIString(resource, deployerProperties);
+
+		assertThat(uri).isEqualTo(
+				"http://test:password@192.168.1.10:9393/resources/maven/org.springframework.cloud.stream.app/time-source-kafka-1.1.0.RELEASE-exec.jar");
+	}
 }
